@@ -10,6 +10,7 @@ namespace DotNetCoreConsole
 {
   public class CodeAnalyzer
   {
+    private List<TextLine> textList = null;
 
     public void Analyze(string targetCode)
     {
@@ -27,51 +28,20 @@ namespace DotNetCoreConsole
         Console.WriteLine("");
       }
 
-      var textList = tree.GetText();
-      foreach (var item in textList.Lines)
-      {
-//        Console.WriteLine($"{item.LineNumber+1,-5}:{item.ToString()}");
-      }
-
       var root = tree.GetRoot();
-      //foreach (var item in root.DescendantTokens())
-      //{
-      //  switch (item.Kind())
-      //  {
-      //    case SyntaxKind.UsingKeyword:
-      //    case SyntaxKind.UsingDirective:
-      //    case SyntaxKind.UsingStatement:
-      //      break;
-      //    default:
-      //      var kindName = Enum.GetName(typeof(SyntaxKind), item.Kind());
-      //      Console.WriteLine($"{kindName,-10}:{item.ValueText}");
-      //      break;
-      //  }
-      //}
 
+      // エラー時表示用ソースコードを取得
+      textList = root.GetText().Lines.ToList();
+
+      // 直近のエラー行
+      var errorLine = -1;
+
+      // エラーチェック
       foreach (CSharpSyntaxNode item in root.DescendantNodes())
       {
         switch (item.Kind())
         {
-          //case SyntaxKind.ExpressionStatement:
-          //  var leftSpan = 0;
-          //  var rightSpan = 0;
-          //  foreach (var exItem in item.ChildNodes())
-          //  {
-          //    rightSpan = exItem.Span.End;
-          //    if(leftSpan > 0 && leftSpan == rightSpan)
-          //    {
-          //      Console.Write($"{"ExpressionStatement",-10}:{item.ToString()}");
-          //      Console.Write($"  //NG!!!!!!");
-          //      Console.WriteLine();
-          //      break;
-          //    }
-          //    leftSpan = rightSpan;
-          //  }
-          //  Console.WriteLine();
-
-          //  break;
-
+          case SyntaxKind.ExpressionStatement:
           case SyntaxKind.SimpleMemberAccessExpression:
           case SyntaxKind.AddAssignmentExpression:
           case SyntaxKind.AndAssignmentExpression:
@@ -98,41 +68,98 @@ namespace DotNetCoreConsole
           case SyntaxKind.ArgumentList:
           case SyntaxKind.IfStatement:
           case SyntaxKind.ElseClause:
+
           case SyntaxKind.LocalDeclarationStatement:
-            var kindName = Enum.GetName(typeof(SyntaxKind), item.Kind());
-            Console.Write($"{kindName,-10}:{item.ToString()}");
+          case SyntaxKind.VariableDeclarator:
+          case SyntaxKind.EqualsValueClause:
 
-            if (item is AssignmentExpressionSyntax a)
+            if (item is ExpressionSyntax)
             {
-              var operatorSpan = a.OperatorToken.Span;
-              var leftSpanEnd = a.Left.Span.End;
-              var rightSpanStart = a.Right.SpanStart;
+              var tokens = item.ChildTokens();
 
-              if(leftSpanEnd == operatorSpan.Start || rightSpanStart == operatorSpan.End)
+              if (!tokens.Any())
               {
-                Console.Write($"  //NG!!!!!!");
+                continue;
+              }
+
+              var token = tokens.First();
+              var tokenSpan = token.Span;
+              var nodes = item.ChildNodes().ToList();
+
+              if (nodes.Count < 2)
+              {
+                continue;
+              }
+
+              var leftNode = nodes[0];
+              var RightNode = nodes[1];
+
+              switch (token.Kind())
+              {
+                case SyntaxKind.DotToken:
+                  break;
+                default:
+                  if(leftNode.Span.End == tokenSpan.Start || tokenSpan.End == leftNode.Span.Start)
+                  {
+                    var startLinePos = item.GetLocation().GetLineSpan().StartLinePosition;
+                    if(errorLine >= startLinePos.Line)
+                    {
+                      continue;
+                    }
+
+                    Console.Write($"[{startLinePos.Line + 1,3},{startLinePos.Character + 1,3}]");
+                    Console.Write(":空白をいれてください");
+                    Console.Write($":{GetSource(item)}");
+                    Console.WriteLine();
+                    errorLine = startLinePos.Line;
+                  }
+                  break;
               }
             }
 
-            if (item is BinaryExpressionSyntax b)
+            if(item is VariableDeclaratorSyntax v)
             {
-              var operatorSpan = b.OperatorToken.Span;
-              var leftSpanEnd = b.Left.Span.End;
-              var rightSpanStart = b.Right.SpanStart;
+              var token = v.Initializer.EqualsToken;
+              var tokenSpan = token.Span;
+              var leftSpan = v.Identifier.Span;
+              var rightSpan = v.Initializer.Value.Span;
 
-              if (leftSpanEnd == operatorSpan.Start || rightSpanStart == operatorSpan.End)
+              if (leftSpan.End == tokenSpan.Start || tokenSpan.End == rightSpan.Start)
               {
-                Console.Write($"  //NG!!!!!!");
+                var startLinePos = item.GetLocation().GetLineSpan().StartLinePosition;
+                if (errorLine >= startLinePos.Line)
+                {
+                  continue;
+                }
+
+                Console.Write($"[{startLinePos.Line + 1,3},{startLinePos.Character + 1,3}]");
+                Console.Write(":空白をいれてください");
+                Console.Write($":{GetSource(item)}");
+                Console.WriteLine();
+                errorLine = startLinePos.Line;
               }
             }
-
-
-            Console.WriteLine();
-
             break;
         }
       }
+    }
 
+    /// <summary>
+    /// 対象ソースを取得
+    /// </summary>
+    /// <param name="node">対象Node</param>
+    /// <returns>対象のソースコード</returns>
+    private string GetSource(CSharpSyntaxNode node)
+    {
+      var pos = node.GetLocation().GetLineSpan();
+      var result = new StringBuilder();
+
+      for(var index = pos.StartLinePosition.Line;index <= pos.EndLinePosition.Line; index++)
+      {
+        result.Append($" {textList[index].ToString()}");
+      }
+
+      return result.ToString();
     }
   }
 }

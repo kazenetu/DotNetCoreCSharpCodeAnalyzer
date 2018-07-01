@@ -52,9 +52,10 @@ namespace WebAPI.Controllers.V1.OrderEdit
         message = string.Empty;
       }
       else{
-      var a=
-123;
+      var a=123;
         a = 1*2+3;
+        a+=12;
+        a=12;
       }
 
       return Json(new FindUserNameResponse(status, message, resultParam));
