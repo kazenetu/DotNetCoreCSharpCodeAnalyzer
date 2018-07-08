@@ -164,14 +164,34 @@ namespace DotNetCoreConsole
                   if (leftSpanEnd + 1 == rightSpanStart)
                   {
                     // 空白をいれてください
-                    Console.WriteLine($"NG! {item.ToString()}");
+                    var startLinePos = item.GetLocation().GetLineSpan().StartLinePosition;
+                    if (errorLine >= startLinePos.Line)
+                    {
+                      continue;
+                    }
+
+                    Console.Write($"[{startLinePos.Line + 1,3},{startLinePos.Character + 1,3}]");
+                    Console.Write(":空白をいれてください");
+                    Console.Write($":{GetSource(item)}");
+                    Console.WriteLine();
+                    errorLine = startLinePos.Line;
                     return false;
                   }
                   
                   if (!commaTokens.Any(commaToken => commaToken.SpanStart == leftSpanEnd))
                   {
                     // カンマは同じ行につけてください。
-                    Console.WriteLine($"check! {item.ToString()}");
+                    var startLinePos = item.GetLocation().GetLineSpan().StartLinePosition;
+                    if (errorLine >= startLinePos.Line)
+                    {
+                      continue;
+                    }
+
+                    Console.Write($"[{startLinePos.Line + 1,3},{startLinePos.Character + 1,3}]");
+                    Console.Write(":カンマは同じ行につけてください。");
+                    Console.Write($":{GetSource(item)}");
+                    Console.WriteLine();
+                    errorLine = startLinePos.Line;
                     return false;
                   }
 
