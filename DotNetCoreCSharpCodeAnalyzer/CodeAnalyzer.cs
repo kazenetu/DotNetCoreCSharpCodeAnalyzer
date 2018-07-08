@@ -139,6 +139,48 @@ namespace DotNetCoreConsole
                 errorLine = startLinePos.Line;
               }
             }
+
+            if(item is ArgumentListSyntax a)
+            {
+              if (!CheckArguments(a))
+              {
+                continue;
+              }
+
+              bool CheckArguments(ArgumentListSyntax args)
+              {
+                var commaTokens = args.ChildTokens().Where(token => token.ToString() == ",");
+                var leftSpanEnd = -1;
+
+                foreach (var token in args.Arguments)
+                {
+                  if (leftSpanEnd < 0)
+                  {
+                    leftSpanEnd = token.Span.End;
+                    continue;
+                  }
+
+                  var rightSpanStart = token.Span.Start;
+                  if (leftSpanEnd + 1 == rightSpanStart)
+                  {
+                    // 空白をいれてください
+                    Console.WriteLine($"NG! {item.ToString()}");
+                    return false;
+                  }
+                  
+                  if (!commaTokens.Any(commaToken => commaToken.SpanStart == leftSpanEnd))
+                  {
+                    // カンマは同じ行につけてください。
+                    Console.WriteLine($"check! {item.ToString()}");
+                    return false;
+                  }
+
+                  leftSpanEnd = token.Span.End;
+                }
+                return true;
+              }
+            }
+
             break;
         }
       }
@@ -156,7 +198,7 @@ namespace DotNetCoreConsole
 
       for(var index = pos.StartLinePosition.Line;index <= pos.EndLinePosition.Line; index++)
       {
-        result.Append($" {textList[index].ToString()}");
+        result.Append($" {textList[index].ToString().TrimStart()}");
       }
 
       return result.ToString();
