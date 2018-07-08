@@ -34,15 +34,15 @@ namespace WebAPI.Controllers.V1.OrderEdit
       // 入力チェック
       if(!request.Validate())
       {
-        logger.LogError(string.Empty,request.ValidateNGPropertyName);
-        return Json(new FindUserNameResponse(FindUserNameResponse.Results.NG, string.Empty, null));
+        logger.LogError(string.Empty, request.ValidateNGPropertyName);
+        return Json(new FindUserNameResponse(FindUserNameResponse.Results.NG, string.Empty,null));
       }
 
       var status = FindUserNameResponse.Results.OK;
       var message = string.Empty;
       FindUserNameResponse.FindUserNameResponseParam resultParam=null;
 
-      var transaction = new OrderEditTransaction(repository, logger);
+      var transaction = new OrderEditTransaction(repository ,logger);
       resultParam = transaction.FindUserName(request);
 
       // 注文者名が存在しない場合はエラー
@@ -58,7 +58,9 @@ namespace WebAPI.Controllers.V1.OrderEdit
         a=12;
       }
 
-      return Json(new FindUserNameResponse(status, message, resultParam));
+      return Json(new FindUserNameResponse(status, 
+message
+, resultParam));
     }
   }
 }";
