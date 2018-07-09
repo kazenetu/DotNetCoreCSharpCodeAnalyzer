@@ -216,9 +216,11 @@ namespace DotNetCoreConsole
       var pos = node.GetLocation().GetLineSpan();
       var result = new StringBuilder();
 
+      var newLineMark = string.Empty;
       for(var index = pos.StartLinePosition.Line;index <= pos.EndLinePosition.Line; index++)
       {
-        result.Append($" {textList[index].ToString().TrimStart()}");
+        result.Append($"{newLineMark}{textList[index].ToString().TrimStart()}");
+        newLineMark = "≫";
       }
 
       return result.ToString();
